@@ -6,6 +6,7 @@ Replicates Bach et al. (2025) for Amazon Men's Shoes Size 8.
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 import numpy as np
+import os
 
 # ── Colors ──────────────────────────────────────────────────────────────
 C_DATAPREP = "#CCE5FF"       # light blue - data prep
@@ -350,7 +351,7 @@ ax.text(
 # ── Save ────────────────────────────────────────────────────────────────
 plt.tight_layout(pad=0.5)
 fig.savefig(
-    "/home/iankuzuma/claude_code/demand-modeling-data-men-8/output/pipeline_flowchart.png",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline_flowchart.png"),
     dpi=110,
     bbox_inches="tight",
     facecolor="white",

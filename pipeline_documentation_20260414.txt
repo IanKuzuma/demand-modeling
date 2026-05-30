@@ -1,0 +1,676 @@
+================================================================================
+AMAZON SHOES DEMAND ANALYSIS — COMPLETE PIPELINE DOCUMENTATION
+Replication of Bach et al. (2025) "Adventures in Demand Analysis Using AI"
+Applied to: Amazon Women's Shoes Size 8 | Jan 2025 – Mar 2026
+Team: Billy (data/pipeline), Ian (embeddings), Yuhui (clustering),
+      Jyoti (presentation) | Advisor: Guy
+================================================================================
+
+
+================================================================================
+PHASE 0 — DATASET COLLECTION FROM KEEPA API
+================================================================================
+
+WHAT IS KEEPA
+  Keepa is a third-party Amazon price tracker that stores historical data for
+  millions of products. It exposes a REST API for querying product metadata,
+  price history, sales rank history, Buy Box data, ratings, and review counts.
+  Amazon does not provide historical sales data directly, so Keepa is used as
+  the primary data source.
+
+  API endpoint : https://api.keepa.com
+  Domain       : 1 (Amazon US)
+  Cost         : 4 tokens per ASIN (1 base + 1 rating + 2 Buy Box)
+  Token refill : 20 tokens per minute on paid plan
+
+HOW THE DATA WAS PULLED — 7 BATCH NOTEBOOKS
+  The Keepa database for Amazon Shoes (Size 8) was pulled in 7 batches,
+  each covering a different sales rank range. This was necessary because:
+  - Each Colab session has a limited runtime (~5-12 hours)
+  - The Keepa API has token rate limits (20 tokens/minute refill)
+  - Splitting by sales rank ensures each batch finishes within one session
+
+  Batch notebooks and their sales rank ranges:
+
+  amazon_shoes_8_batch1.ipynb   Rank       1 –  10,000
+  amazon_shoes_8_batch2.ipynb   Rank  10,001 –  20,000
+  amazon_shoes_8_batch3.ipynb   Rank  20,001 –  30,000
+  amazon_shoes_8_batch4.ipynb   Rank  30,001 –  40,000
+  amazon_shoes_8_batch5.ipynb   Rank  40,001 –  60,000
+  amazon_shoes_8_batch6.ipynb   Rank  60,001 –  80,000
+  amazon_shoes_8_batch7.ipynb   Rank  80,001 – 100,000
+
+  Date window (same for all batches):
+    START_DATE = '2025-01-01'
+    END_DATE   = '2026-03-31'
+    DAYS       = 454
+
+  Output location: demand_modeling_data_8_v2/ on Google Drive
+    amazon_shoes_8_batch1.parquet
+    amazon_shoes_8_batch2.parquet
+    amazon_shoes_8_batch3.parquet
+    amazon_shoes_8_batch4.parquet
+    amazon_shoes_8_batch5.parquet
+    amazon_shoes_8_batch6.parquet
+    amazon_shoes_8_batch7.parquet
+
+KEEPA FILTER PARAMETERS (applied in all batches)
+  categories_exclude : [679320011, 679365011, 679378011, 679433011]
+                       Exclude Costumes, Accessories, and unrelated categories
+  title              : 'shoes'           Must contain the word shoes
+  rootCategory       : ['7141123011']    Amazon Shoes root category only
+  type (exclude ✓)   : sandal, shoelace, slipper
+  brand (exclude ✓)  : crocs, flip*flop
+  outOfStockPercentage90_BB_gte: 1       Had some out-of-stock time (active)
+  outOfStockPercentage90_BB_lte: 80      Not perpetually out of stock
+  trackingSince_lte  : 7364640           Anti-backfill guard — Keepa must have
+                                         been tracking this ASIN before Jan 2025
+  productType        : [0, 1, 2]         Physical products only
+  size               : ['8']             Women's size 8 only
+
+  NOTE: The ✓ prefix (unicode 0x271C) before type and brand values is Keepa's
+  syntax for excluding those values. So '✓sandal' means exclude sandals.
+
+WHAT EACH BATCH NOTEBOOK DOES
+  Input  : Keepa API (live HTTP requests, no local input file needed)
+  Process:
+    1. Query Keepa Finder API with SELECTION filter to get matching ASIN list
+    2. Paginate through all results (100 ASINs per page), cache to .txt file
+       (ASIN_CACHE allows resuming if notebook crashes mid-run)
+    3. For each batch of 100 ASINs call Keepa Product Data API:
+       stats=1, rating=1, buybox=1, offers=0
+    4. Expand daily Keepa history into weekly rows:
+       window=7  : 7-day rolling average
+       window=28 : 28-day rolling average
+    5. Apply log transforms:
+       SALES_RANK   = log(1 / sales_rank)
+       PRICE        = log(avg_price)
+       BUYBOX_PRICE = log(avg_buybox_price)
+    6. Extract product metadata:
+       text     = title | manufacturer | brand | model | color | size
+       subcat   = leaf category name from Keepa categoryTree
+       image    = first product image URL from imagesCSV
+    7. Save to parquet file on Google Drive
+
+  Output columns (27):
+    ASIN, window, date, SALES_RANK, PRICE, BUYBOX_PRICE, text, RATING,
+    REVIEW_COUNT, subcat, subcat_aggregated, New Offer Count: Current,
+    Count of retrieved live offers: New FBA,
+    Count of retrieved live offers: New FBM,
+    Lightning Deals: Upcoming Deal, Buy Box: Is FBA, image,
+    SALES_RANK_original, PRICE_original, BUYBOX_PRICE_original,
+    gender, manufacturer, brand, model, color, size
+
+FILE NAMING EXPLANATION (batch notebooks)
+  amazon_shoes_8_batchN.ipynb / .parquet
+    amazon        = data source platform
+    shoes         = product category
+    8             = shoe size
+    batchN        = batch number 1 through 7
+    .parquet      = columnar file format, efficient for large datasets
+
+
+================================================================================
+NOTEBOOK: amazon_shoes_8_combine.ipynb
+================================================================================
+
+INPUT
+  demand_modeling_data_8_v2/amazon_shoes_8_batch1.parquet
+  demand_modeling_data_8_v2/amazon_shoes_8_batch2.parquet
+  ... through ...
+  demand_modeling_data_8_v2/amazon_shoes_8_batch7.parquet
+
+OUTPUT
+  demand_modeling_data_8_v2/amazon_shoes_8_combined.parquet
+  ~1,008,930 rows | 7,761 ASINs | 27 columns | Jan 2025 – Mar 2026
+  Genders: Women (5,472), Men (2,279), Costumes (9), Accessories (1)
+
+PROCESS
+  1. Load all 7 batch parquets and concatenate into one dataframe
+  2. Deduplicate on (ASIN, date, window) — removes any overlap at batch edges
+  3. Sort by (ASIN, date, window)
+  4. Trim date overshoot from weekly binning (last week can land after Mar 31)
+  5. Print NaN check, gender distribution, size distribution, subcat breakdown
+  6. Save combined parquet
+
+
+================================================================================
+NOTEBOOK: amazon_shoes_8_eda.ipynb
+================================================================================
+
+INPUT  : demand_modeling_data_8_v2/amazon_shoes_8_combined.parquet
+OUTPUT : Exploratory analysis printed to screen (no files saved)
+
+Covers: date range check, ASIN counts per gender/size, subcat distributions,
+NaN percentages, price distributions, sales rank distributions. Used to
+confirm data quality before running the main pipeline.
+
+
+================================================================================
+PHASE 1 — MAIN PIPELINE
+================================================================================
+
+FOLDER STRUCTURE ON GOOGLE DRIVE
+
+  demand_modeling_data_8_v2/                   ← Source data
+    amazon_shoes_8_batch1.parquet
+    amazon_shoes_8_batch2.parquet
+    amazon_shoes_8_batch3.parquet
+    amazon_shoes_8_batch4.parquet
+    amazon_shoes_8_batch5.parquet
+    amazon_shoes_8_batch6.parquet
+    amazon_shoes_8_batch7.parquet
+    amazon_shoes_8_combined.parquet             ← Combined input for pipeline
+
+  demand_modeling_data_women_8_v2/              ← Pipeline output (Women only)
+    data_preparation/                           ← Data pipeline notebooks (00_part*)
+      00_part1_data_preparation.ipynb
+      00_part2_download_images.ipynb
+      00_part3a_train_txtimg_lag1.ipynb
+      00_part3b_train_txtimg_time_ind.ipynb
+      00_part3c_train_txt_lag1.ipynb
+      00_part3d_train_txt_time_ind.ipynb
+      00_part4_verify.ipynb
+      00_part5_create_image_parquet.ipynb
+    code/                                       ← Analysis notebooks (01 through 04)
+      main_train_keys.csv                       ← ASIN+date index for train split
+      main_val_keys.csv                         ← ASIN+date index for val split
+      utils/
+        paths_config.yaml                       ← Prediction file path registry
+        utils_data2.py                          ← Data utility functions
+        utils_models.py                         ← Model utility functions
+      01_1_create_dataset_txt_img.ipynb
+      01_2_create_dataset_txt.ipynb
+      02_cluster_centroid_products.ipynb
+      02_cluster_centroid_products_random20.ipynb
+      03_1_predictive_performance_txt_img.ipynb
+      03_2_predictive_performance_txt.ipynb
+      04_evaluation.ipynb
+    data/
+      amzn_shoes_monthly_diffs_ffill_fixed_splits/
+        train-00000-of-00001.parquet            ← 2,573 ASINs × 57 weeks
+        validation-00000-of-00001.parquet       ← 2,574 ASINs × 57 weeks
+      images/
+        {ASIN}.jpg                              ← 5,147 JPEG files
+      amzn_shoes_monthly_avg_long_ffill_28_7_images/
+        train-00000-of-00004-part000.parquet
+        train-00000-of-00004-part001.parquet
+        train-00000-of-00004-part002.parquet
+        train-00000-of-00004-part003.parquet
+        train-00001-of-00004-part000.parquet
+        train-00001-of-00004-part001.parquet
+        train-00001-of-00004-part002.parquet
+        train-00001-of-00004-part003.parquet
+        train-00002-of-00004-part000.parquet
+        train-00002-of-00004-part001.parquet
+        train-00002-of-00004-part002.parquet
+        train-00002-of-00004-part003.parquet
+        train-00003-of-00004-part000.parquet
+        train-00003-of-00004-part001.parquet
+        train-00003-of-00004-part002.parquet
+        train-00003-of-00004-part003.parquet
+        (16 parquet files | 4 shards × 4 parts = 16 total)
+      predictions/
+        txtimg/lag1/
+          train_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=024-val_combined_loss=0.1952_txtimg_dim=128_proj_emb_step=.zip
+          train_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=018-val_combined_loss=0.1884_txtimg_dim=256_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=024-val_combined_loss=0.1952_txtimg_dim=128_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=018-val_combined_loss=0.1884_txtimg_dim=256_proj_emb_step=.zip
+          pred_diff_shoes-diff-model-txtimg_2026-04-13-embdim=768_lag1-epoch=014-val_combined_loss=0.1762_txtimg_lag1_train.zip
+          pred_diff_shoes-diff-model-txtimg_2026-04-13-embdim=768_lag1-epoch=014-val_combined_loss=0.1762_txtimg_lag1_val.zip
+        txtimg/time_indipendent/
+          train_pred_model-2026-04-13-embdim=None_time_independent_txtimg_mod4-epoch=023-val_combined_loss=0.5006_txtimg_dim=128_proj_emb_step=.zip
+          train_pred_model-2026-04-13-embdim=None_time_independent_txtimg_mod4-epoch=013-val_combined_loss=0.4672_txtimg_dim=256_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_time_independent_txtimg_mod4-epoch=023-val_combined_loss=0.5006_txtimg_dim=128_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_time_independent_txtimg_mod4-epoch=013-val_combined_loss=0.4672_txtimg_dim=256_proj_emb_step=.zip
+          pred_diff_shoes-diff-model-txtimg_2026-04-13-embdim=768_lag1-epoch=013-val_combined_loss=0.1790_txtimg_invariant_train.zip
+          pred_diff_shoes-diff-model-txtimg_2026-04-13-embdim=768_lag1-epoch=013-val_combined_loss=0.1790_txtimg_invariant_val.zip
+        txt/lag1/
+          train_pred_model-2026-04-13-embdim=None_lag1_txt_mod4-epoch=018-val_combined_loss=0.1952_txt_dim=128_proj_emb_step=.zip
+          train_pred_model-2026-04-13-embdim=None_lag1_txt_mod4-epoch=015-val_combined_loss=0.1891_txt_dim=256_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_lag1_txt_mod4-epoch=018-val_combined_loss=0.1952_txt_dim=128_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_lag1_txt_mod4-epoch=015-val_combined_loss=0.1891_txt_dim=256_proj_emb_step=.zip
+          pred_diff_shoes-diff-model-txt_2026-04-13-embdim=768_lag1-epoch=015-val_combined_loss=0.1809_txt_lag1_train.zip
+          pred_diff_shoes-diff-model-txt_2026-04-13-embdim=768_lag1-epoch=015-val_combined_loss=0.1809_txt_lag1_val.zip
+        txt/time_indipendent/
+          train_pred_model-2026-04-13-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.5462_txt_dim=128_proj_emb_step=.zip
+          train_pred_model-2026-04-13-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.5445_txt_dim=256_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.5462_txt_dim=128_proj_emb_step=.zip
+          val_pred_model-2026-04-13-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.5445_txt_dim=256_proj_emb_step=.zip
+          pred_diff_shoes-diff-model-txt_2026-04-13-embdim=768_lag1-epoch=015-val_combined_loss=0.1916_txt_invariant_train.zip
+          pred_diff_shoes-diff-model-txt_2026-04-13-embdim=768_lag1-epoch=015-val_combined_loss=0.1916_txt_invariant_val.zip
+      dataset_txt_only_False_embeddings_True_train.zip
+      dataset_txt_only_False_embeddings_True_val.zip
+      dataset_txt_only_True_embeddings_True_train.zip
+      dataset_txt_only_True_embeddings_True_val.zip
+    output/
+      02_cluster_centroid_products/
+        collage_cluster_img_{0-4}.png
+        collage_cluster_txt_{0-4}.png
+        elbow_test.png
+      02_cluster_centroid_products_random20/
+        collage_cluster_img_{0-4}.png
+        collage_cluster_txt_{0-4}.png
+      04_evaluation/
+        (ATE and CATE plots)
+
+
+================================================================================
+NOTEBOOK: 00_part1_data_preparation.ipynb
+Location: demand_modeling_data_women_8_v2/data_preparation/
+================================================================================
+
+INPUT
+  demand_modeling_data_8_v2/amazon_shoes_8_combined.parquet
+  1,008,930 rows | 7,761 ASINs | 27 columns | Jan 2025 – Mar 2026
+
+OUTPUT
+  code/main_train_keys.csv                    ASIN+date for 2,573 train ASINs
+  code/main_val_keys.csv                      ASIN+date for 2,574 val ASINs
+  data/amzn_shoes_monthly_diffs_ffill_fixed_splits/train-00000-of-00001.parquet
+  data/amzn_shoes_monthly_diffs_ffill_fixed_splits/validation-00000-of-00001.parquet
+
+PROCESS
+  1. Load combined parquet, parse dates
+  2. Remove dirty ASINs:
+     wrong gender (Costumes & Accessories, Shoe Jewelry & Watch Accessories),
+     wrong size, 100% NaN in SALES_RANK / PRICE / RATING / REVIEW_COUNT
+     Total removed: 12 ASINs
+  3. Filter to Women only → 5,471 ASINs
+  4. Drop 9 unused columns: SALES_RANK_original, PRICE_original,
+     BUYBOX_PRICE_original, gender, manufacturer, brand, model, color, size
+  5. Fix dtypes: window to float64, FBA/FBM offer counts filled with 0
+  6. Rebuild subcat_aggregated from top 10 Women subcategories:
+     Pumps, Flats, Fashion Sneakers, Loafers & Slip-Ons, Walking,
+     Mules & Clogs, Road Running, Heeled Sandals, Ballet & Dance, Ankle & Bootie
+     All others → "Other"
+  7. CRITICAL — Fill BEFORE trim:
+     Jan/Feb 2025 data acts as forward-fill seed for March.
+     BUYBOX_PRICE: ffill then bfill (handles products that gained Buy Box
+     during the window — no prior history to carry forward, so bfill
+     carries the first known price backward to earlier dates)
+     All other columns: ffill only
+  8. Trim to analysis window: remove Jan and Feb rows (date >= 2025-03-01)
+  9. Create NaN flag columns on trimmed window:
+     is_SALES_RANK_filled, is_PRICE_filled, is_BUYBOX_PRICE_filled,
+     is_RATING_filled, is_REVIEW_COUNT_filled
+     (0 = original value existed, 1 = was NaN and got filled)
+ 10. Drop incomplete ASINs:
+     BUYBOX_PRICE: drop if 100% NaN across full year (92 ASINs — no Buy Box)
+     Other columns: drop if any NaN remains after fill
+     Total dropped: 324 ASINs | Final: 5,147 ASINs
+ 11. Reorder to 17-column paper schema, verify dtypes
+ 12. Stratified 50/50 ASIN-level split by subcat_aggregated (seed=42)
+     Train: 2,573 ASINs | Val: 2,574 ASINs | No overlap
+ 13. Drop NaN flag columns, save parquets and key CSVs
+
+OUTPUT PARQUET COLUMNS (17)
+  ASIN, window, date, SALES_RANK, PRICE, BUYBOX_PRICE, text, RATING,
+  REVIEW_COUNT, subcat, subcat_aggregated, New Offer Count: Current,
+  Count of retrieved live offers: New FBA,
+  Count of retrieved live offers: New FBM,
+  Lightning Deals: Upcoming Deal, Buy Box: Is FBA, image
+
+
+================================================================================
+NOTEBOOK: 00_part2_download_images.ipynb
+Location: demand_modeling_data_women_8_v2/data_preparation/
+================================================================================
+
+INPUT  : data/amzn_shoes_monthly_diffs_ffill_fixed_splits/ (ASIN + image URL)
+OUTPUT : data/images/{ASIN}.jpg — 5,147 JPEG files, ~500-700 MB total
+
+PROCESS
+  1. Load both parquets, extract unique ASIN + image URL
+  2. Skip already-downloaded images (safe to re-run)
+  3. Download each JPEG with 3 retries and 0.2s sleep between requests
+  4. Convert to RGB, save as {ASIN}.jpg
+  5. Cross-check all 5,147 clean ASINs have images on disk
+
+
+================================================================================
+NOTEBOOKS: 00_part3a / 3b / 3c / 3d — Embedding Model Training
+Location: demand_modeling_data_women_8_v2/data_preparation/
+GPU: A100 required | Time: ~1.5–5 hrs per variant
+================================================================================
+
+THE 4 VARIANTS (one notebook per variant to fit within Colab session limits)
+  Part 3a: txtimg + lag1          Text+Image+Tabular, lag-1 time features
+  Part 3b: txtimg + time_ind      Text+Image+Tabular, no lag
+  Part 3c: txt + lag1             Text-only, lag-1 time features
+  Part 3d: txt + time_ind         Text-only, no lag
+
+INPUT
+  data/amzn_shoes_monthly_diffs_ffill_fixed_splits/ (train + val parquets)
+  data/images/{ASIN}.jpg  (Parts 3a and 3b only — not needed for txt-only)
+
+MODEL ARCHITECTURE (Bach et al. 2025 Appendix G, Figure 18)
+  Text encoder    : RoBERTa (cardiffnlp/twitter-roberta-base) → 768-dim
+  Image encoder   : BEiT (microsoft/beit-base-patch16-224) → 768-dim
+  Tabular encoder : SAINT (pytorch-widedeep 1.7.0) → 768-dim
+  Fusion          : LayerNorm → Cross Attention Block → FC → 256-dim embedding
+  Prediction heads: FC → Q_hat (SALES_RANK), FC → P_hat (PRICE)
+
+TRAINING CONFIG
+  WINDOW=28, MOD=4, MAX_PERIODS=53, BATCH_SIZE=32
+  EPOCHS_LEVEL=25 (predicts Q_t and P_t directly)
+  EPOCHS_DIFF=15  (predicts ΔQ_t and ΔP_t — first differences)
+  LR=2e-5, EMB_DIMS=[128, 256], Optimizer: AdamW + cosine annealing
+
+OUTPUT (6 zip files per variant = 24 total)
+  See predictions/ folder structure above for exact filenames.
+
+  Level model (4 files per variant: 2 emb_dims × 2 splits):
+    {split}_pred_model-{DATE}-embdim=None_{lag_type}_{modality}_mod4-
+    epoch={E}-val_combined_loss={L}_{modality}_dim={D}_proj_emb_step=.zip
+
+  Diff model (2 files per variant: 1 emb_dim × 2 splits):
+    pred_diff_shoes-diff-model-{modality}_{DATE}-embdim=768_lag1-
+    epoch={E}-val_combined_loss={L}_{modality}_{lag_or_invariant}_{split}.zip
+
+PREDICTION ZIP FILE NAMING EXPLAINED
+  train / val          = which split this file covers
+  embdim=None          = dim is set by dim= parameter (level model)
+  embdim=768           = internal encoder dimension (diff model)
+  time_independent     = no lag features used
+  lag1                 = lag-1 time-dependent features
+  txtimg               = full multimodal (text + image + tabular)
+  txt                  = text-only model
+  mod4                 = every 4th time step used
+  epoch=018            = best checkpoint epoch number
+  val_combined_loss=X  = validation loss at best checkpoint
+  dim=128 / dim=256    = embedding projection size
+  proj_emb_step=       = paper convention, value intentionally empty
+  invariant            = time-independent diff model suffix
+  lag1 (in diff name)  = lag-1 diff model suffix
+
+
+================================================================================
+NOTEBOOK: 00_part4_verify.ipynb
+Location: demand_modeling_data_women_8_v2/data_preparation/
+================================================================================
+
+INPUT  : All 24 zip files in predictions/ subfolders
+         code/main_train_keys.csv and main_val_keys.csv
+OUTPUT : Verification report printed to screen (no files saved)
+
+CHECKS
+  1. All 4 prediction folders exist and each has exactly 6 zip files (24 total)
+  2. Each zip loads without error
+  3. Row counts are consistent with expected train/val sizes
+  4. ASIN/date keys align with main_train_keys.csv and main_val_keys.csv
+
+
+================================================================================
+NOTEBOOK: 00_part5_create_image_parquet.ipynb
+Location: demand_modeling_data_women_8_v2/data_preparation/
+================================================================================
+
+INPUT  : data/images/{ASIN}.jpg — 5,147 JPEG files
+OUTPUT : data/amzn_shoes_monthly_avg_long_ffill_28_7_images/
+           16 parquet files (4 shards × 4 parts)
+           train-0000{0-3}-of-00004-part00{0-3}.parquet
+           Total: 16 files | 5,147 ASINs | Columns: ASIN, bytes (image as raw bytes)
+
+WHY THIS IS NEEDED
+  Notebook 01_1 uses the HuggingFace datasets library and reads images as
+  raw bytes from a parquet column:
+    img = Image.open(io.BytesIO(df_img.loc[asin, "bytes"]))
+  It cannot read individual JPEG files directly.
+
+PROCESS
+  1. Read all 5,147 JPEGs from images/
+  2. Resize each to 224×224 px (BEiT input size)
+  3. Convert to JPEG bytes (quality=90)
+  4. Split into 4 chunks × 2 parts = 8 parquet files
+  5. Verify HuggingFace datasets can load the output
+
+IMAGE PARQUET FOLDER NAMING EXPLAINED
+  amzn_shoes_monthly_avg_long_ffill_28_7_images
+    amzn         = Amazon data
+    shoes        = product category
+    monthly      = monthly cadence
+    avg_long     = long format with averaged values
+    ffill        = forward filled
+    28_7         = both window=28 and window=7 data included
+    images       = image bytes embedded in parquet
+
+  train-0000{i}-of-00004-part00{j}.parquet
+    train        = all ASINs labelled as train (not a real train/val split)
+    0000{i}      = chunk index 0 to 3 (4 chunks)
+    of-00004     = 4 chunks total
+    part00{j}    = part 0, 1, 2, or 3 within each shard (4 parts per shard)
+    N_SHARDS=4, N_PARTS=4 → 4 × 4 = 16 files total
+
+
+================================================================================
+NOTEBOOK: 01_1_create_dataset_txt_img.ipynb
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+INPUT
+  data/amzn_shoes_monthly_diffs_ffill_fixed_splits/ (train + val parquets)
+  All 24 prediction zips via utils/paths_config.yaml
+  code/main_train_keys.csv and main_val_keys.csv
+
+OUTPUT
+  data/dataset_txt_only_False_embeddings_True_train.zip
+  data/dataset_txt_only_False_embeddings_True_val.zip
+
+PROCESS
+  1. Load panel parquets (window=28, max_periods=57, every 4th time step)
+  2. Create dummy variables for subcat_aggregated and date
+  3. Load prediction zips (time_independent emb=256 and lag1 emb=256) via
+     load_pred_and_emb() using paths_config.yaml
+  4. Join predictions to panel by (ASIN, date)
+  5. Compute lag-1 and lag-2 features for Q_t and P_bb_t
+  6. Compute first differences: Delta_Q_t and Delta_P_bb_t
+  7. Normalize and center 256-dim txtimg embeddings
+  8. PCA: reduce to 5 principal components
+  9. KMeans: 5 clusters, compute cosine similarity to each centroid
+ 10. Compute 5 nearest neighbors in embedding space + distances
+ 11. Compute neighbor-weighted lagged Buy Box prices
+ 12. Save as zip (compressed CSV inside)
+
+DATASET ZIP FILE NAMING EXPLAINED
+  dataset_txt_only_False_embeddings_True_train.zip
+    txt_only=False   = full multimodal model (text + image + tabular)
+    embeddings=True  = embedding vectors are included in this file
+    train            = training split
+    .zip             = compressed CSV (pandas zip compression)
+
+
+================================================================================
+NOTEBOOK: 01_2_create_dataset_txt.ipynb
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+INPUT / OUTPUT: Same structure as 01_1 but txt_only=True
+
+OUTPUT
+  data/dataset_txt_only_True_embeddings_True_train.zip
+  data/dataset_txt_only_True_embeddings_True_val.zip
+
+DIFFERENCE FROM 01_1
+  Uses predictions from predictions/txt/ (text-only model)
+  Embeddings are from RoBERTa only — no BEiT, no SAINT
+
+
+================================================================================
+NOTEBOOK: 02_cluster_centroid_products.ipynb
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+INPUT
+  data/dataset_txt_only_False_embeddings_True_*.zip
+  data/dataset_txt_only_True_embeddings_True_*.zip
+  data/amzn_shoes_monthly_avg_long_ffill_28_7_images/ (16 parquet files — product images)
+
+OUTPUT
+  output/02_cluster_centroid_products/
+    collage_cluster_img_0.png  to  collage_cluster_img_4.png
+    collage_cluster_txt_0.png  to  collage_cluster_txt_4.png
+    elbow_test.png
+
+PROCESS
+  1. Extract emb_* (txtimg) and emb_*_txt (txt-only) embedding columns
+  2. Normalize, PCA to 2D/3D for visualization
+  3. KMeans k=5 clustering on both embedding types
+  4. Optional elbow test to explore optimal k
+  5. Find 4 products closest to each cluster centroid
+  6. Build collage: product image (224×224) + truncated title text
+  7. Display inline with matplotlib and save PNG to output/
+
+PURPOSE
+  Qualitative sanity check — do the 5 clusters make product-level sense?
+  Cluster 2 = Fashion Sneakers (elastic demand) vs
+  Cluster 4 = Flats (inelastic demand) helps explain CATE heterogeneity in 04.
+
+
+================================================================================
+NOTEBOOK: 02_cluster_centroid_products_random20.ipynb
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+Same as 02 above but shows 20 random products per cluster instead of
+the 4 closest to centroid — gives a broader picture of cluster composition.
+
+INPUT
+  data/dataset_txt_only_False_embeddings_True_*.zip
+  data/dataset_txt_only_True_embeddings_True_*.zip
+  data/amzn_shoes_monthly_avg_long_ffill_28_7_images/ (16 parquet files — product images)
+
+OUTPUT
+  output/02_cluster_centroid_products_random20/
+    collage_cluster_img_0.png  to  collage_cluster_img_4.png
+    collage_cluster_txt_0.png  to  collage_cluster_txt_4.png
+
+
+================================================================================
+NOTEBOOKS: 03_1 and 03_2 — Predictive Performance
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+INPUT
+  03_1 reads: dataset_txt_only_False_embeddings_True_*.zip  (txtimg model)
+  03_2 reads: dataset_txt_only_True_embeddings_True_*.zip   (txt-only model)
+
+OUTPUT : R2 table printed to screen (no files saved)
+
+PROCESS
+  Computes R2 on test set for Outcome (Q_t) and Treatment (P_bb_t):
+    OLS (Tabular)
+    Boosting/LightGBM (Tabular)
+    OLS + Tabular + PCA
+    Boosting + Tabular + PCA
+    OLS + Tabular + Similarities
+    Boosting + Tabular + Similarities
+    OLS + Tabular + Embeddings
+    Boosting + Tabular + Embeddings
+    Deep Time Independent (pred_ml_l from time_ind model)
+    Deep Time Dependent   (pred_ml_l_lag_1 from lag1 model)
+  Run on both level data (Q_t, P_bb_t) and diff data (ΔQ_t, ΔP_bb_t)
+
+
+================================================================================
+NOTEBOOK: 04_evaluation.ipynb
+Location: demand_modeling_data_women_8_v2/code/
+================================================================================
+
+INPUT
+  data/dataset_txt_only_False_embeddings_True_train.zip
+  data/dataset_txt_only_False_embeddings_True_val.zip
+
+OUTPUT
+  output/04_evaluation/  (ATE and CATE plots)
+  ATE estimate with 90% confidence interval
+  CATE estimates per cluster
+  Chi-squared heterogeneity p-value
+
+PROCESS
+  1. Load final dataset, drop lag-2 features and lag-1 predictions
+  2. Build basis vectors: subcat dummies + cluster similarities + date dummies
+  3. DoubleML Partial Linear Regression (PLR):
+       Q_t = theta * P_bb_t + g(X) + epsilon
+     theta = causal price elasticity | LightGBM as nuisance learner
+  4. Model predictions (pred_ml_l, pred_ml_m) used as price instruments
+  5. ATE: average elasticity across all products
+  6. CATE: heterogeneous elasticity per cluster
+  7. Chi-squared test for heterogeneity (p < 0.05 = significant)
+
+
+================================================================================
+UTILITY FILES
+================================================================================
+
+utils/paths_config.yaml
+  Maps (modality, lag_type, emb_dim, split) → exact zip file paths.
+  Used by load_pred_and_emb() in notebooks 01_1 and 01_2.
+  Relative paths are relative to code/ working directory.
+  Key CSVs (main_train_keys.csv, main_val_keys.csv) are in code/ —
+  notebooks 01_1 and 01_2 read them from the same working directory.
+  Must be updated whenever new training runs produce new zip filenames.
+
+utils/utils_data2.py
+  Key functions: load_pred_and_emb, center_and_norm, get_pca, get_cluster,
+  get_similarities, add_lags_and_scale_data, compute_neighbors_and_distances,
+  compute_neighbor_weighted_prices_lagged, generate_basis, generate_interactions
+
+utils/utils_models.py
+  Key functions: iv_model, lin_model, lin_model_cate, summarize_lin_model,
+  summarize_dml, chi2_test, predict_cate
+
+requirements.txt
+  Python package versions for notebooks 01 through 04.
+  pytorch-widedeep (SAINT) installed separately in Part 3 notebooks using an
+  isolated /content/pkgs folder to bypass Python 3.12 dependency conflicts.
+
+
+================================================================================
+KEY VARIABLE DEFINITIONS
+================================================================================
+
+Q_t          = SALES_RANK = log(1/sales_rank) — quantity/demand signal
+P_bb_t       = BUYBOX_PRICE = log(buy_box_price) — treatment variable (price)
+Delta_Q_t    = Q_t − Q_{t-1}   (first difference of quantity)
+Delta_P_bb_t = P_bb_t − P_{t-1} (first difference of price)
+window=28    = 28-day rolling average (used for modeling)
+mod=4        = every 4th time step kept (approximately monthly)
+pred_ml_l    = level model prediction for Q_t
+pred_ml_m    = level model prediction for P_bb_t
+_diff suffix = diff model prediction for ΔQ_t or ΔP_bb_t
+_lag_1 suffix = from lag-1 model variant
+emb_0..255   = 256-dim product embedding from fusion model
+pca_0..4     = first 5 PCA components of embeddings
+similarity_cluster_0..4 = cosine similarity to each KMeans centroid
+theta        = price elasticity of demand (key causal estimate)
+ATE          = Average Treatment Effect (average theta across all products)
+CATE         = Conditional ATE (theta per cluster)
+
+
+================================================================================
+NOTES ON PAPER FIDELITY
+================================================================================
+
+Follows Bach et al. (2025) arxiv 2501.00382. Intentional differences:
+
+1. Dataset   : Amazon Women's Shoes Size 8 (Jan 2025 – Mar 2026)
+               5,147 clean ASINs after data preparation
+               vs Amazon Toy Cars (2023–2024) in original paper
+2. Batches   : 7 batches by sales rank range 1 to 100,000
+               vs original paper's different batch structure
+3. Split     : 50/50 ASIN-level stratified split (advisor recommendation)
+               Train: 2,573 ASINs | Val: 2,574 ASINs
+               vs 80/20 in original
+4. Window    : 57 weekly periods (max_periods=57)
+               vs 54 in original (max_periods=54)
+5. BUYBOX fill: ffill + bfill for BUYBOX_PRICE
+               vs ffill only in original
+6. SAINT     : Installed to isolated /content/pkgs with fake gensim injection
+               to bypass Python 3.12 conflicts in Colab
+
+Reference repo: github.com/JanTeichertKluge/demand-analysis-repro
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================

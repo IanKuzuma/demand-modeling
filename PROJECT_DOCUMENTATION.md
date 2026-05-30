@@ -16,6 +16,7 @@ This document provides a complete, end-to-end explanation of the demand modeling
 6. [Analysis Phase](#6-analysis-phase)
 7. [Evaluation Phase (DoubleML)](#7-evaluation-phase-doubleml)
 8. [Complete File Reference](#8-complete-file-reference)
+9. [Subcategory Experiments + Method Updates (May 2026)](#9-subcategory-experiments--method-updates-may-2026)
 
 ---
 
@@ -526,3 +527,125 @@ part1 → part2 → part3a ─┐
                                                          │  03_2 ─┤→ 04
                                                          └────────┘
 ```
+
+---
+
+## 9. Subcategory Experiments + Method Updates (May 2026)
+
+This section documents work added after the original men-8 / women-8 pipelines: the repo
+restructure, the **subcategory experiments** (asking whether elasticity differs *within* a
+gender, e.g. Pumps vs Flats), and three method changes the advisors requested. The original
+pipeline above is unchanged; this is the consolidated map of what is new and why.
+
+### 9.1 Repository layout (restructured)
+
+The project now lives in `demand_modeling/` with one self-contained folder per experiment.
+Each folder has the usual `data/ code/ data_preparation/ output/` layout and runs the same
+pipeline; the originals already have trained embeddings, the new folders reuse or retrain them.
+
+```
+demand_modeling/
+├── men-8/                                     original full pipeline (men)
+├── women-8/                                   original full pipeline (women)
+├── men-8-subcat-split-existing-embedding/     LAZY  — symlink men-8 predictions
+├── women-8-subcat-split-existing-embedding/   LAZY  — symlink women-8 predictions
+├── men-8-subcat-split-separate-embedding/     PROPER — embeddings trained within subcat (RC)
+├── women-8-subcat-split-separate-embedding/   PROPER — embeddings trained within subcat (RC)
+└── PROJECT_DOCUMENTATION.md
+```
+
+Subcategories (filtered by `subcat_aggregated`, original train/val split preserved, zero ASIN
+overlap): **men** = Loafers & Slip-Ons (180 train), Fashion Sneakers (172), Oxfords (130);
+**women** = Pumps (626), Flats (496), Fashion Sneakers (430).
+
+### 9.2 The "lazy vs proper" experiment design
+
+The question is whether an embedding model trained on the *whole* gender captures
+subcategory-specific demand structure, or whether you must train *within* each subcategory.
+We build both, side by side, per gender:
+
+| Variant | Folder suffix | Embeddings | Runs where |
+|---|---|---|---|
+| **LAZY** | `-existing-embedding` | reuse the whole-gender embeddings (24 prediction zips symlinked) | local |
+| **PROPER** | `-separate-embedding` | retrain the encoders *within each subcategory* | RC (GPU) |
+
+Both keep the original train/val split (no re-splitting → no leakage) and recompute PCA,
+clusters, neighbor prices, and the DoubleML elasticities within the subcategory. LAZY is the
+cheap shortcut (embeddings already exist); PROPER is the real test of within-subcat adaptation.
+
+### 9.3 Within-subcat embeddings use LoRA (not freeze, not full fine-tune)
+
+The PROPER `00_part3a–3d` notebooks were reworked to fine-tune the encoders with **LoRA**
+(Low-Rank Adaptation, Hu et al. 2021; HuggingFace `peft`). The reason is sample size:
+
+- Each subcategory has only ~130–630 training products, but RoBERTa + BEiT carry ~200M params.
+- **Full fine-tuning** of all 200M params on 130 products → memorization/overfit.
+- **Freezing** the encoders → every subcategory shares identical encoders, so "within-subcat"
+  embeddings would be indistinguishable from the whole-dataset ones — the experiment would
+  test nothing.
+- **LoRA** freezes the base weights and learns small low-rank deltas on the attention
+  **query/value** projections (`r=8, α=16, dropout=0.1`), so only ~1% of encoder params train.
+  Capacity is matched to sample size while the encoders still genuinely adapt per subcategory.
+  Everything downstream (SAINT, cross-attention fusion, projection, prediction heads) trains
+  normally. This is also the regularization the advisor asked for. **RC prerequisite:**
+  `pip install peft` in the `demand_modeling` conda env.
+
+**Comparability caveat.** The whole-gender (LAZY) embeddings were *fully* fine-tuned while the
+within-subcat (PROPER) embeddings are *LoRA*-fine-tuned, so lazy-vs-proper is not a perfectly
+method-identical A/B. It is a deliberate, far milder compromise than freezing, and full
+fine-tuning on 130–630 products is not viable. We flag this when interpreting results.
+
+### 9.4 The `00_part3` notebooks survive the RC 2-hour GPU cap
+
+RC `gpu-interactive` sessions are capped at ~2 hours. Each part3 notebook was made resumable:
+per-epoch checkpoints to `data/checkpoints/` (home filesystem, not `/tmp`), full resume state
+(model/optimizer/scheduler/epoch/best), **skip-completed** units whose output zips already
+exist, **early stopping** (`PATIENCE`, helps tiny subcats), and a **graceful time-budget stop**
+(`WALLCLOCK_MIN`, default 110): after each epoch it checks the clock and, if over budget, saves
+state and exits cleanly — never mid-epoch. A long run becomes: launch → auto-stops at the cap →
+relaunch → continues, with no lost work. Each notebook trains this gender/variant's level models
+(emb_dim 128 and 256) plus the first-difference model → 6 prediction zips per variant.
+
+### 9.5 The ϑ rank→demand conversion (`04_evaluation`)
+
+Our DoubleML outcome is *negative log sales rank*, a **proxy** for demand, so the coefficients
+are **rank**-elasticities. He & Hollenbeck (2020) show rank and quantity follow a Pareto law,
+`log E[Q] ≈ C − (1/ϑ)·log(rank)`, so a rank-elasticity becomes a **demand (quantity)**
+elasticity when multiplied by `1/ϑ`. Their "Clothing, Shoes & Jewelry" category gives
+`ϑ ≈ 0.605`, so we use `ϑ = 0.6` → scale by `1/0.6 ≈ 1.667` (this is Victor et al. 2025,
+Remark 1, previously unimplemented). Every table and forest plot now reports **both** the raw
+rank-coefficient and the converted demand elasticity. This is what addresses the advisor's
+"estimates look too inelastic" comment — the converted numbers are ~1.67× larger in magnitude.
+
+### 9.6 `04_evaluation` is now dual-variant
+
+`04_evaluation.ipynb` (which supersedes the old `04_evaluation` and `04_evaluation_v2_delta`)
+wraps the whole DoubleML evaluation in `run_variant(txt_only)` and runs it for **both** the
+text+image and text-only embeddings, then compares them: a combined elasticity table
+(specification × variant, raw and ϑ-converted), an overlaid comparison forest plot, per-variant
+plots under `output/04_evaluation/{txtimg,txt}/`, and a CATE / heterogeneity comparison table.
+It uses delta (first-difference) outcome/treatment and embedding-similarity competitor prices,
+fits five DoubleML PLR specifications, and clusters standard errors by ASIN. Validated on
+women-8: the main spec (PLR + Emb + Controls, txt+img) reproduces the prior result, rank coef
+**−0.103** → demand elasticity **−0.172**; the text-only variant is weaker (rank −0.076),
+indicating the product images carry demand-relevant information.
+
+> Note: the original notebook passed `lr=0.02` to `LGBMRegressor`, which is **not** a LightGBM
+> parameter name (it is `learning_rate`) so it was silently ignored and the models ran at the
+> default `learning_rate=0.1`. The reworked notebook makes `learning_rate=0.1` explicit so the
+> results reproduce and the config is honest.
+
+### 9.7 How to run
+
+- **LAZY (local):** per subcat run `data_preparation/00_part5` → `code/01_1 → 01_2 → 02* →
+  03_1 → 03_2 → 04_evaluation`. Embeddings come from the symlinked whole-gender predictions.
+- **PROPER (RC then local):** on the RC, run the resumable `00_part3a–3d` (relaunch to resume),
+  then scp the prediction zips into `data/predictions/`. Then `00_part4_verify` (regenerates
+  `paths_config.yaml` from the new zips) → `00_part5` → `01_1 → 01_2 → 02* → 03_1 → 03_2 →
+  04_evaluation`.
+- **Originals (men-8 / women-8):** embeddings already exist; just re-run `04_evaluation` for the
+  ϑ-corrected, dual-variant numbers.
+
+The payoff: for each gender × subcategory, the LAZY (whole-gender) vs PROPER (within-subcat)
+embedding elasticity, each reported as both a rank-coefficient and a ϑ-converted demand
+elasticity, for both text-only and text+image.

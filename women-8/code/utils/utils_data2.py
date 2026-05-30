@@ -258,7 +258,10 @@ def compute_neighbors_and_distances(embeddings, df_full, n_neighbors=5):
     )
     lagged_quantities = lagged_quantities.reindex(df_full.index)
 
-    embeddings = embeddings[lagged_quantities.notna()]
+    # Filter embeddings to rows where lagged quantity exists,
+    # using index intersection to avoid unalignable boolean indexer errors
+    common_idx = embeddings.index.intersection(lagged_quantities.dropna().index)
+    embeddings = embeddings.loc[common_idx]
 
     all_neighbor_asins = {}
     all_neighbor_distances = {}

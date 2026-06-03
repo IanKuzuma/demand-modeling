@@ -1,0 +1,7 @@
+subcat,n_train,proper,lazy,gap,CI_overlap,proper_sig,lazy_sig
+women/pumps,626,-0.102,-0.161,0.059,True,True,True
+women/flats,496,-0.095,-0.104,0.01,True,True,True
+women/fashion-sneakers,430,-0.232,-0.337,0.105,True,True,True
+men/loafers-slip-ons,180,-0.035,-0.12,0.085,True,False,False
+men/fashion-sneakers,172,-0.781,-0.376,-0.405,True,True,False
+men/oxfords,130,-0.022,0.24,-0.262,True,False,False

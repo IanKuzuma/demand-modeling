@@ -547,10 +547,10 @@ pipeline; the originals already have trained embeddings, the new folders reuse o
 demand_modeling/
 ├── men-8/                                     original full pipeline (men)
 ├── women-8/                                   original full pipeline (women)
-├── men-8-subcat-split-existing-embedding/     LAZY  — symlink men-8 predictions
-├── women-8-subcat-split-existing-embedding/   LAZY  — symlink women-8 predictions
-├── men-8-subcat-split-separate-embedding/     PROPER — embeddings trained within subcat (RC)
-├── women-8-subcat-split-separate-embedding/   PROPER — embeddings trained within subcat (RC)
+├── men-8-subcat-split-lazy-embedding/     LAZY  — symlink men-8 predictions
+├── women-8-subcat-split-lazy-embedding/   LAZY  — symlink women-8 predictions
+├── men-8-subcat-split-proper-embedding/     PROPER — embeddings trained within subcat (RC)
+├── women-8-subcat-split-proper-embedding/   PROPER — embeddings trained within subcat (RC)
 └── PROJECT_DOCUMENTATION.md
 ```
 
@@ -566,8 +566,8 @@ We build both, side by side, per gender:
 
 | Variant | Folder suffix | Embeddings | Runs where |
 |---|---|---|---|
-| **LAZY** | `-existing-embedding` | reuse the whole-gender embeddings (24 prediction zips symlinked) | local |
-| **PROPER** | `-separate-embedding` | retrain the encoders *within each subcategory* | RC (GPU) |
+| **LAZY** | `-lazy-embedding` | reuse the whole-gender embeddings (24 prediction zips symlinked) | local |
+| **PROPER** | `-proper-embedding` | retrain the encoders *within each subcategory* | RC (GPU) |
 
 Both keep the original train/val split (no re-splitting → no leakage) and recompute PCA,
 clusters, neighbor prices, and the DoubleML elasticities within the subcategory. LAZY is the

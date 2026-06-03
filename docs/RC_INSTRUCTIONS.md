@@ -6,8 +6,8 @@ LoRA-enabled and **resumable** (per-epoch checkpoints, skip-completed, graceful 
 2-hour cap), so a session getting cut off is a non-event: just relaunch and it continues.
 
 **Files in this folder (`~/rc_handoff/`):**
-- `men-proper.tar.gz` (335M) — men-8-subcat-split-separate-embedding (loafers / fashion-sneakers / oxfords)
-- `women-proper.tar.gz` (503M) — women-8-subcat-split-separate-embedding (pumps / flats / fashion-sneakers)
+- `men-proper.tar.gz` (335M) — men-8-subcat-split-proper-embedding (loafers / fashion-sneakers / oxfords)
+- `women-proper.tar.gz` (503M) — women-8-subcat-split-proper-embedding (pumps / flats / fashion-sneakers)
 
 Each archive contains, per subcat: the filtered train/val parquets, the product images, and the
 4 LoRA part3 notebooks. The image counts are baked in; nothing else is needed to train.
@@ -60,8 +60,8 @@ When a subcat is done it should have **24 zips** total under `data/predictions/`
 
 On the RC, from your home dir:
 ```bash
-tar czf men-preds.tar.gz   men-8-subcat-split-separate-embedding/*/data/predictions
-tar czf women-preds.tar.gz women-8-subcat-split-separate-embedding/*/data/predictions
+tar czf men-preds.tar.gz   men-8-subcat-split-proper-embedding/*/data/predictions
+tar czf women-preds.tar.gz women-8-subcat-split-proper-embedding/*/data/predictions
 ```
 Then LOCALLY (paths are preserved, so this drops each subcat's zips back into place):
 ```fish
@@ -73,7 +73,7 @@ tar xzf ~/rc_handoff/women-preds.tar.gz -C ~/claude_code/demand_modeling/
 
 ## Step 5 — Tell me
 
-Once the zips are back in the `*-separate-embedding/<subcat>/data/predictions/` folders, tell me
+Once the zips are back in the `*-proper-embedding/<subcat>/data/predictions/` folders, tell me
 and I'll run the rest locally per subcat: `part4_verify` (rebuilds paths_config.yaml from the new
 zips) → `part5` → `01_1 → 01_2 → 02 → 03 → 04_evaluation`. That produces the proper-embedding
 elasticities and completes the lazy-vs-proper comparison.

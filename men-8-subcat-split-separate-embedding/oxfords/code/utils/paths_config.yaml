@@ -1,44 +1,44 @@
 txt:
   time_independent:
     128:
-      train: ../data/predictions/txt/time_indipendent/train_pred_model-2026-04-14-embdim=None_time_independent_txt_mod4-epoch=011-val_combined_loss=0.8651_txt_dim=128_proj_emb_step=.zip
-      val: ../data/predictions/txt/time_indipendent/val_pred_model-2026-04-14-embdim=None_time_independent_txt_mod4-epoch=011-val_combined_loss=0.8651_txt_dim=128_proj_emb_step=.zip
+      train: ../data/predictions/txt/time_indipendent/train_pred_model-2026-05-31-embdim=None_time_independent_txt_mod4-epoch=013-val_combined_loss=0.8591_txt_dim=128_proj_emb_step=.zip
+      val: ../data/predictions/txt/time_indipendent/val_pred_model-2026-05-31-embdim=None_time_independent_txt_mod4-epoch=013-val_combined_loss=0.8591_txt_dim=128_proj_emb_step=.zip
     256:
-      train: ../data/predictions/txt/time_indipendent/train_pred_model-2026-04-14-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.8576_txt_dim=256_proj_emb_step=.zip
-      val: ../data/predictions/txt/time_indipendent/val_pred_model-2026-04-14-embdim=None_time_independent_txt_mod4-epoch=014-val_combined_loss=0.8576_txt_dim=256_proj_emb_step=.zip
+      train: ../data/predictions/txt/time_indipendent/train_pred_model-2026-05-31-embdim=None_time_independent_txt_mod4-epoch=010-val_combined_loss=0.8493_txt_dim=256_proj_emb_step=.zip
+      val: ../data/predictions/txt/time_indipendent/val_pred_model-2026-05-31-embdim=None_time_independent_txt_mod4-epoch=010-val_combined_loss=0.8493_txt_dim=256_proj_emb_step=.zip
   lag1:
     128:
-      train: ../data/predictions/txt/lag1/train_pred_model-2026-04-14-embdim=None_lag1_txt_mod4-epoch=023-val_combined_loss=0.3149_txt_dim=128_proj_emb_step=.zip
-      val: ../data/predictions/txt/lag1/val_pred_model-2026-04-14-embdim=None_lag1_txt_mod4-epoch=023-val_combined_loss=0.3149_txt_dim=128_proj_emb_step=.zip
+      train: ../data/predictions/txt/lag1/train_pred_model-2026-05-31-embdim=None_lag1_txt_mod4-epoch=018-val_combined_loss=0.6608_txt_dim=128_proj_emb_step=.zip
+      val: ../data/predictions/txt/lag1/val_pred_model-2026-05-31-embdim=None_lag1_txt_mod4-epoch=018-val_combined_loss=0.6608_txt_dim=128_proj_emb_step=.zip
     256:
-      train: ../data/predictions/txt/lag1/train_pred_model-2026-04-14-embdim=None_lag1_txt_mod4-epoch=017-val_combined_loss=0.2980_txt_dim=256_proj_emb_step=.zip
-      val: ../data/predictions/txt/lag1/val_pred_model-2026-04-14-embdim=None_lag1_txt_mod4-epoch=017-val_combined_loss=0.2980_txt_dim=256_proj_emb_step=.zip
+      train: ../data/predictions/txt/lag1/train_pred_model-2026-05-31-embdim=None_lag1_txt_mod4-epoch=012-val_combined_loss=0.5032_txt_dim=256_proj_emb_step=.zip
+      val: ../data/predictions/txt/lag1/val_pred_model-2026-05-31-embdim=None_lag1_txt_mod4-epoch=012-val_combined_loss=0.5032_txt_dim=256_proj_emb_step=.zip
 txtimg:
   time_independent:
     128:
-      train: ../data/predictions/txtimg/time_indipendent/train_pred_model-2026-04-14-embdim=None_time_independent_txtimg_mod4-epoch=016-val_combined_loss=0.7022_txtimg_dim=128_proj_emb_step=.zip
-      val: ../data/predictions/txtimg/time_indipendent/val_pred_model-2026-04-14-embdim=None_time_independent_txtimg_mod4-epoch=016-val_combined_loss=0.7022_txtimg_dim=128_proj_emb_step=.zip
+      train: ../data/predictions/txtimg/time_indipendent/train_pred_model-2026-05-31-embdim=None_time_independent_txtimg_mod4-epoch=020-val_combined_loss=0.9183_txtimg_dim=128_proj_emb_step=.zip
+      val: ../data/predictions/txtimg/time_indipendent/val_pred_model-2026-05-31-embdim=None_time_independent_txtimg_mod4-epoch=020-val_combined_loss=0.9183_txtimg_dim=128_proj_emb_step=.zip
     256:
-      train: ../data/predictions/txtimg/time_indipendent/train_pred_model-2026-04-14-embdim=None_time_independent_txtimg_mod4-epoch=011-val_combined_loss=0.6917_txtimg_dim=256_proj_emb_step=.zip
-      val: ../data/predictions/txtimg/time_indipendent/val_pred_model-2026-04-14-embdim=None_time_independent_txtimg_mod4-epoch=011-val_combined_loss=0.6917_txtimg_dim=256_proj_emb_step=.zip
+      train: ../data/predictions/txtimg/time_indipendent/train_pred_model-2026-05-31-embdim=None_time_independent_txtimg_mod4-epoch=020-val_combined_loss=0.7732_txtimg_dim=256_proj_emb_step=.zip
+      val: ../data/predictions/txtimg/time_indipendent/val_pred_model-2026-05-31-embdim=None_time_independent_txtimg_mod4-epoch=020-val_combined_loss=0.7732_txtimg_dim=256_proj_emb_step=.zip
   lag1:
     128:
-      train: ../data/predictions/txtimg/lag1/train_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=020-val_combined_loss=0.4017_txtimg_dim=128_proj_emb_step=.zip
-      val: ../data/predictions/txtimg/lag1/val_pred_model-2026-04-13-embdim=None_lag1_txtimg_mod4-epoch=020-val_combined_loss=0.4017_txtimg_dim=128_proj_emb_step=.zip
+      train: ../data/predictions/txtimg/lag1/train_pred_model-2026-05-31-embdim=None_lag1_txtimg_mod4-epoch=022-val_combined_loss=0.6973_txtimg_dim=128_proj_emb_step=.zip
+      val: ../data/predictions/txtimg/lag1/val_pred_model-2026-05-31-embdim=None_lag1_txtimg_mod4-epoch=022-val_combined_loss=0.6973_txtimg_dim=128_proj_emb_step=.zip
     256:
-      train: ../data/predictions/txtimg/lag1/train_pred_model-2026-04-14-embdim=None_lag1_txtimg_mod4-epoch=022-val_combined_loss=0.3603_txtimg_dim=256_proj_emb_step=.zip
-      val: ../data/predictions/txtimg/lag1/val_pred_model-2026-04-14-embdim=None_lag1_txtimg_mod4-epoch=022-val_combined_loss=0.3603_txtimg_dim=256_proj_emb_step=.zip
+      train: ../data/predictions/txtimg/lag1/train_pred_model-2026-05-31-embdim=None_lag1_txtimg_mod4-epoch=009-val_combined_loss=0.7283_txtimg_dim=256_proj_emb_step=.zip
+      val: ../data/predictions/txtimg/lag1/val_pred_model-2026-05-31-embdim=None_lag1_txtimg_mod4-epoch=009-val_combined_loss=0.7283_txtimg_dim=256_proj_emb_step=.zip
 diff_txt:
   time_independent:
-    train: ../data/predictions/txt/time_indipendent/pred_diff_shoes-diff-model-txt_2026-04-14-embdim=768_lag1-epoch=002-val_combined_loss=0.2496_txt_invariant_train.zip
-    val: ../data/predictions/txt/time_indipendent/pred_diff_shoes-diff-model-txt_2026-04-14-embdim=768_lag1-epoch=002-val_combined_loss=0.2496_txt_invariant_val.zip
+    train: ../data/predictions/txt/time_indipendent/pred_diff_shoes-diff-model-txt_2026-05-31-embdim=768_lag1-epoch=011-val_combined_loss=0.1568_txt_invariant_train.zip
+    val: ../data/predictions/txt/time_indipendent/pred_diff_shoes-diff-model-txt_2026-05-31-embdim=768_lag1-epoch=011-val_combined_loss=0.1568_txt_invariant_val.zip
   lag1:
-    train: ../data/predictions/txt/lag1/pred_diff_shoes-diff-model-txt_2026-04-14-embdim=768_lag1-epoch=012-val_combined_loss=0.2209_txt_lag1_train.zip
-    val: ../data/predictions/txt/lag1/pred_diff_shoes-diff-model-txt_2026-04-14-embdim=768_lag1-epoch=012-val_combined_loss=0.2209_txt_lag1_val.zip
+    train: ../data/predictions/txt/lag1/pred_diff_shoes-diff-model-txt_2026-05-31-embdim=768_lag1-epoch=015-val_combined_loss=0.1543_txt_lag1_train.zip
+    val: ../data/predictions/txt/lag1/pred_diff_shoes-diff-model-txt_2026-05-31-embdim=768_lag1-epoch=015-val_combined_loss=0.1543_txt_lag1_val.zip
 diff_txtimg:
   time_independent:
-    train: ../data/predictions/txtimg/time_indipendent/pred_diff_shoes-diff-model-txtimg_2026-04-14-embdim=768_lag1-epoch=010-val_combined_loss=0.2414_txtimg_invariant_train.zip
-    val: ../data/predictions/txtimg/time_indipendent/pred_diff_shoes-diff-model-txtimg_2026-04-14-embdim=768_lag1-epoch=010-val_combined_loss=0.2414_txtimg_invariant_val.zip
+    train: ../data/predictions/txtimg/time_indipendent/pred_diff_shoes-diff-model-txtimg_2026-05-31-embdim=768_lag1-epoch=012-val_combined_loss=0.1557_txtimg_invariant_train.zip
+    val: ../data/predictions/txtimg/time_indipendent/pred_diff_shoes-diff-model-txtimg_2026-05-31-embdim=768_lag1-epoch=012-val_combined_loss=0.1557_txtimg_invariant_val.zip
   lag1:
-    train: ../data/predictions/txtimg/lag1/pred_diff_shoes-diff-model-txtimg_2026-04-14-embdim=768_lag1-epoch=014-val_combined_loss=0.2206_txtimg_lag1_train.zip
-    val: ../data/predictions/txtimg/lag1/pred_diff_shoes-diff-model-txtimg_2026-04-14-embdim=768_lag1-epoch=014-val_combined_loss=0.2206_txtimg_lag1_val.zip
+    train: ../data/predictions/txtimg/lag1/pred_diff_shoes-diff-model-txtimg_2026-05-31-embdim=768_lag1-epoch=013-val_combined_loss=0.1538_txtimg_lag1_train.zip
+    val: ../data/predictions/txtimg/lag1/pred_diff_shoes-diff-model-txtimg_2026-05-31-embdim=768_lag1-epoch=013-val_combined_loss=0.1538_txtimg_lag1_val.zip

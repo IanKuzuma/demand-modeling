@@ -471,7 +471,7 @@ All saved in `output/04_evaluation/`:
 ### Directory Structure
 
 ```
-demand-modeling-data-men-8/
+demand-modeling-data-men-8-whole/
 ├── data/
 │   ├── amazon_shoes_8_combined.parquet          # Raw input (all genders)
 │   ├── amzn_shoes_monthly_diffs_ffill_fixed_splits/
@@ -547,8 +547,8 @@ pipeline; the originals already have trained embeddings, the new folders reuse o
 
 ```
 demand_modeling/
-├── men-8/                                     original full pipeline (men)
-├── women-8/                                   original full pipeline (women)
+├── men-8-whole/                                     original full pipeline (men)
+├── women-8-whole/                                   original full pipeline (women)
 ├── men-8-subcat-split-lazy-embedding/     LAZY  — symlink men-8 predictions
 ├── women-8-subcat-split-lazy-embedding/   LAZY  — symlink women-8 predictions
 ├── men-8-subcat-split-proper-embedding/     PROPER — embeddings trained within subcat (RC)

@@ -8,7 +8,7 @@ Filtered from the Men's Shoes Size 8 dataset, original train/val split preserved
 - Filtered by `subcat_aggregated == "Fashion Sneakers"`; zero train/val ASIN overlap.
 
 ## Embeddings
-**Embeddings: reused (whole-gender).** `data/predictions` is a symlink to `men-8/data/predictions` (24 zips trained on ALL men's ASINs); they are filtered to this subcategory during the join in `01_1`/`01_2`. This is the 'lazy' shortcut — no per-subcat embedding training.
+**Embeddings: reused (whole-gender).** `data/predictions` is a symlink to `men-8-whole/data/predictions` (24 zips trained on ALL men's ASINs); they are filtered to this subcategory during the join in `01_1`/`01_2`. This is the 'lazy' shortcut — no per-subcat embedding training.
 
 ## Recomputed within this subcategory
 PCA components, KMeans clusters, neighbor/substitute prices, and the DoubleML elasticities.

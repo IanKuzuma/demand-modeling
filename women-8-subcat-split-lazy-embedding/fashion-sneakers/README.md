@@ -8,7 +8,7 @@ Filtered from Women's Shoes Size 8 dataset.
 - Original train/val split preserved (no re-splitting)
 
 ## What's reused from women-8
-- Prediction zips (24 files) via symlink to women-8/data/predictions/
+- Prediction zips (24 files) via symlink to women-8-whole/data/predictions/
 - Embeddings were trained on ALL women's ASINs, filtered during join
 
 ## What's recomputed

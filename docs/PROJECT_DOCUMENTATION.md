@@ -4,6 +4,8 @@
 
 This document provides a complete, end-to-end explanation of the demand modeling pipeline applied to **Amazon Men's Shoes (Size 8)**. This is a parallel experiment to the Women's Shoes version built by a collaborator.
 
+> **Consolidated results across all experiments** (men/women × whole-gender / lazy / proper subcategory splits, ϑ-converted, dual-variant) are in [`../summary/SUMMARY.md`](../summary/SUMMARY.md) and [`../summary/00_summary.ipynb`](../summary/00_summary.ipynb).
+
 ---
 
 ## Table of Contents

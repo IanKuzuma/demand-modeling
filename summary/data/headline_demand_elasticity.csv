@@ -1,0 +1,11 @@
+embedding,,whole,whole,lazy,lazy,proper,proper
+variant,,txtimg,txt,txtimg,txt,txtimg,txt
+label,n_train,,,,,,
+men-8 (whole),1029,-0.169,-0.218,,,,
+men/fashion-sneakers,172,,,-0.376,-0.836,-0.781,-0.759
+men/loafers-slip-ons,180,,,-0.12,0.045,-0.035,0.003
+men/oxfords,130,,,0.24,0.112,-0.022,-0.02
+women-8 (whole),2573,-0.172,-0.126,,,,
+women/fashion-sneakers,430,,,-0.337,-0.115,-0.232,-0.151
+women/flats,496,,,-0.104,-0.063,-0.095,-0.08
+women/pumps,626,,,-0.161,-0.09,-0.102,-0.127

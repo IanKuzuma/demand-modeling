@@ -17,15 +17,15 @@ Each archive contains, per subcat: the filtered train/val parquets, the product 
 ## Step 1 — Transfer to the RC (run LOCALLY; you'll be prompted for your RC password)
 
 ```fish
-scp ~/rc_handoff/men-proper.tar.gz   imawan.l@login.explorer.northeastern.edu:~/
-scp ~/rc_handoff/women-proper.tar.gz imawan.l@login.explorer.northeastern.edu:~/
+scp ~/rc_handoff/men-proper.tar.gz   <your-rc-username>@login.explorer.northeastern.edu:~/
+scp ~/rc_handoff/women-proper.tar.gz <your-rc-username>@login.explorer.northeastern.edu:~/
 ```
 (One archive each, so scp won't choke the way thousands of loose image files would.)
 
 ## Step 2 — Set up on the RC
 
 ```bash
-ssh imawan.l@login.explorer.northeastern.edu
+ssh <your-rc-username>@login.explorer.northeastern.edu
 cd ~
 tar xzf men-proper.tar.gz
 tar xzf women-proper.tar.gz
@@ -65,8 +65,8 @@ tar czf women-preds.tar.gz women-8-subcat-split-proper-embedding/*/data/predicti
 ```
 Then LOCALLY (paths are preserved, so this drops each subcat's zips back into place):
 ```fish
-scp 'imawan.l@login.explorer.northeastern.edu:~/men-preds.tar.gz'   ~/rc_handoff/
-scp 'imawan.l@login.explorer.northeastern.edu:~/women-preds.tar.gz' ~/rc_handoff/
+scp '<your-rc-username>@login.explorer.northeastern.edu:~/men-preds.tar.gz'   ~/rc_handoff/
+scp '<your-rc-username>@login.explorer.northeastern.edu:~/women-preds.tar.gz' ~/rc_handoff/
 tar xzf ~/rc_handoff/men-preds.tar.gz   -C ~/claude_code/demand_modeling/
 tar xzf ~/rc_handoff/women-preds.tar.gz -C ~/claude_code/demand_modeling/
 ```

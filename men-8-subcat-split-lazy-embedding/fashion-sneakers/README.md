@@ -4,7 +4,7 @@ Men's size-8 **fashion sneakers**, analyzed as a standalone subcategory using th
 embedding design (whole-gender embeddings reused, not re-trained). Filtered from `men-8-whole`
 with the original train/val split preserved.
 
-Parent: [`../README.md`](../README.md) · Project report: [`../../summary/SUMMARY.md`](../../summary/SUMMARY.md)
+Parent: [`../README.md`](../README.md) · Project report: [`../../summary/README.md`](../../summary/README.md)
 
 > **Underpowered (N = 172).** Treat this estimate as illustrative only; do not draw conclusions
 > from men subcategories with N < ~400. The reliable results are the women subcats and the

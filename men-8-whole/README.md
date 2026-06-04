@@ -4,7 +4,7 @@ The **whole-gender baseline** for men: all men's size-8 listings in one model, e
 trained on the entire gender. This is one of the two original runs (the other is
 [`women-8-whole`](../women-8-whole)) and the reference point for every subcategory split.
 
-See the project report [`../summary/SUMMARY.md`](../summary/SUMMARY.md) and the root
+See the project report [`../summary/README.md`](../summary/README.md) and the root
 [`../README.md`](../README.md) for the full context and methodology.
 
 ## Headline result

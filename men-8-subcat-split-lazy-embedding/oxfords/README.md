@@ -4,7 +4,7 @@ Men's size-8 **oxfords**, analyzed as a standalone subcategory using the **lazy*
 design (whole-gender embeddings reused, not re-trained). Filtered from `men-8-whole` with the
 original train/val split preserved.
 
-Parent: [`../README.md`](../README.md) · Project report: [`../../summary/SUMMARY.md`](../../summary/SUMMARY.md)
+Parent: [`../README.md`](../README.md) · Project report: [`../../summary/README.md`](../../summary/README.md)
 
 > **Underpowered (N = 130) — smallest subcat in the project.** Treat this estimate as
 > illustrative only. This is the cell that produced the project's only **positive** (wrong-sign)

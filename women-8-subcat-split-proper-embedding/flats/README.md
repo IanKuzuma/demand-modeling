@@ -4,7 +4,7 @@ Women's size-8 **flats**, analyzed as a standalone subcategory using the **prope
 design (embeddings re-trained within the subcategory via LoRA). Filtered from the women's
 dataset with the original train/val split preserved.
 
-Parent: [`../README.md`](../README.md) · Project report: [`../../summary/SUMMARY.md`](../../summary/SUMMARY.md)
+Parent: [`../README.md`](../README.md) · Project report: [`../../summary/README.md`](../../summary/README.md)
 
 ## Result (main spec, text+image, ϑ-converted demand elasticity)
 

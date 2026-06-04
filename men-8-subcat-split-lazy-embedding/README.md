@@ -5,7 +5,7 @@ the embeddings are **reused from [`men-8-whole`](../men-8-whole)** (trained on a
 products, then filtered to the subcategory during the join). No new embedding training.
 
 Compare against [`men-8-subcat-split-proper-embedding`](../men-8-subcat-split-proper-embedding),
-which re-trains embeddings within each subcategory. See [`../summary/SUMMARY.md`](../summary/SUMMARY.md)
+which re-trains embeddings within each subcategory. See [`../summary/README.md`](../summary/README.md)
 for the full lazy-vs-proper analysis and the root [`../README.md`](../README.md) for methodology.
 
 > **Underpowered — read the caveat.** All three men subcategories have only 130–180 training

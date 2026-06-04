@@ -4,7 +4,7 @@ Men's size-8 **oxfords**, analyzed as a standalone subcategory using the **prope
 design (embeddings re-trained within the subcategory via LoRA). Filtered from the men's dataset
 with the original train/val split preserved.
 
-Parent: [`../README.md`](../README.md) · Project report: [`../../summary/SUMMARY.md`](../../summary/SUMMARY.md)
+Parent: [`../README.md`](../README.md) · Project report: [`../../summary/README.md`](../../summary/README.md)
 
 > **Underpowered (N = 130) — smallest subcat in the project.** Treat this estimate as
 > illustrative only. Do not draw conclusions from N < ~400.

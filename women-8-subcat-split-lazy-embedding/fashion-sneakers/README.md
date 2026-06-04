@@ -4,7 +4,7 @@ Women's size-8 **fashion sneakers**, analyzed as a standalone subcategory using 
 embedding design (whole-gender embeddings reused, not re-trained). Filtered from `women-8-whole`
 with the original train/val split preserved.
 
-Parent: [`../README.md`](../README.md) · Project report: [`../../summary/SUMMARY.md`](../../summary/SUMMARY.md)
+Parent: [`../README.md`](../README.md) · Project report: [`../../summary/README.md`](../../summary/README.md)
 
 ## Result (main spec, text+image, ϑ-converted demand elasticity)
 

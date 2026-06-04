@@ -5,7 +5,7 @@ the embeddings are **re-trained within each subcategory** (LoRA-fine-tuned on a 
 subcat gets encoders adapted to its own products.
 
 Compare against [`men-8-subcat-split-lazy-embedding`](../men-8-subcat-split-lazy-embedding),
-which reuses the whole-gender embeddings. See [`../summary/SUMMARY.md`](../summary/SUMMARY.md)
+which reuses the whole-gender embeddings. See [`../summary/README.md`](../summary/README.md)
 for the full lazy-vs-proper analysis and the root [`../README.md`](../README.md) for methodology.
 
 > **Underpowered — read the caveat.** All three men subcategories have only 130–180 training
